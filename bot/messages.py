@@ -1,4 +1,4 @@
 class Messages:
     """UI Messages for the bot."""
 
-    pass
+    MISSING_API_CREDENTIALS = "❌ Missing API credentials! Check .env file."
