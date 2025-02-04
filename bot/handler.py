@@ -50,6 +50,8 @@ class TaskHandler:
         command_handlers = {
             "/start": self.handle_start,
             Buttons.REGISTRATION: self.initiate_registration,
+            Buttons.ALL: self.list_all_tasks,
+            Buttons.VIEW_TASK: self.request_task_number,
             "/help": self.handle_help,
             Buttons.HELP: self.handle_help,
         }
@@ -62,6 +64,28 @@ class TaskHandler:
                 await handler(uid, message)  # type: ignore
         else:
             await self.handle_unknown_command(message)
+
+    async def list_all_tasks(self, uid: str, message: Message) -> None:
+        """Lists all tasks for the user."""
+        tasks = db.get_tasks(uid)
+
+        if not tasks:
+            await message.reply(Messages.NO_TASKS_YET, reply_markup=Keyboards.MainMenu)
+        else:
+            task_list = "\n".join(
+                [f"{get_task_status_icon(bool(task[3]))} {i + 1}. {task[1]}" for i, task in enumerate(tasks)]
+            )
+            await message.reply(Messages.task_list(task_list), reply_markup=Keyboards.MainMenu)
+
+    async def request_task_number(self, uid: str, message: Message) -> None:
+        """Asks the user to enter a task number."""
+        tasks = db.get_tasks(uid)
+
+        if not tasks:
+            await message.reply(Messages.NO_TASKS_YET, reply_markup=Keyboards.MainMenu)
+        else:
+            await message.reply(Messages.task_number_request(len(tasks)))
+            cache.update_user_cache(uid, Keys.STATE, States.ENTER_TASK_NUMBER)
 
     async def handle_start(self, uid: str, user: object, message: Message) -> None:
         """Handles the /start command."""

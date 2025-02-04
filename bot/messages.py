@@ -31,6 +31,8 @@ class Messages:
     TASK_DELETED = "✅ Task deleted!"
 
     UNKNOWN_COMMAND = "Unknown command"
+    
+    NO_TASKS_YET = "You don't have any tasks yet."
 
     HELP_TEXT = "This bot helps you manage your tasks. You can add, list, and delete tasks."
     INVALID_INPUT = "❌ Invalid input. Please enter a valid task number."
@@ -45,6 +47,16 @@ class Messages:
     def welcome(name: str) -> str:
         """Returns the welcome message with a name."""
         return f"Welcome, {name}!"
+
+    @staticmethod
+    def task_list(task_list: str) -> str:
+        """Formats the task list message."""
+        return f"Your tasks:\n\n{task_list}"
+
+    @staticmethod
+    def task_number_request(max_tasks: int) -> str:
+        """Returns the task number request message."""
+        return f"Enter task number (from 1 to {max_tasks}):"
 
     @staticmethod
     def add_pencil(updated_value: str) -> str:
