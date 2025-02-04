@@ -7,6 +7,13 @@ class Messages:
     ENTER_YOUR_USERNAME = "Enter your username:"
     USERNAME_EXISTS = "❌ This username is already taken.\nPlease enter a different username:"
 
+    EDIT_TASK_TITLE = "✏️ Edit Task Title:\n\nOld Title to copy:"
+    EDIT_TASK_DESCRIPTION = "✏️ Edit Task Description:\n\nOld Description to copy:"
+    SEND_NEW_TITLE = "Send a new title:"
+    SEND_NEW_DESCRIPTION = "Send a new description:"
+    NO_DESCRIPTION_YET = "...No description yet..."
+    NO_CHANGES_MADE = "No changes have been made"
+
     ICON_DONE = "✅"
     ICON_TODO = "➡️"
 
@@ -38,6 +45,11 @@ class Messages:
     def welcome(name: str) -> str:
         """Returns the welcome message with a name."""
         return f"Welcome, {name}!"
+
+    @staticmethod
+    def add_pencil(updated_value: str) -> str:
+        """Adds a pencil emoji to the updated value."""
+        return f"{updated_value} (✏️)"
 
     @staticmethod
     def task_details(task_number: int, task_title: str, task_description: str, status_icon: str) -> str:

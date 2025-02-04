@@ -39,6 +39,8 @@ class TaskHandler:
             States.ENTER_TASK_TITLE: self.add_task_title,
             States.ENTER_TASK_DESCRIPTION: self.add_task_description,
             States.ENTER_TASK_NUMBER: self.view_task_by_number,
+            States.EDIT_TASK_TITLE: self.edit_task_title,
+            States.EDIT_TASK_DESCRIPTION: self.edit_task_description,
         }
         if state in state_handlers:
             await state_handlers[state](uid, message)
@@ -113,6 +115,63 @@ class TaskHandler:
         cache.delete_user_cache(uid)
         await message.reply(Messages.TASK_ADDED, reply_markup=Keyboards.MainMenu)
 
+    async def edit_task_title(self, uid: str, message: Message) -> None:
+        """Edits the title of a task."""
+        await self.update_task(uid, message, Keys.TASK_TITLE)
+
+    async def edit_task_description(self, uid: str, message: Message) -> None:
+        """Edits the description of a task."""
+        await self.update_task(uid, message, Keys.TASK_DESCRIPTION)
+
+    async def update_task(self, uid: str, message: Message, field: str) -> None:
+        """Updates the task title or description in the database."""
+        task_id = cache.get_user_cache(uid, Keys.EDITED_TASK_ID)
+
+        if not task_id:
+            await message.reply(Messages.TASK_NOT_FOUND)
+            return
+
+        task = db.get_task(task_id)
+        if not task:
+            await message.reply(Messages.TASK_NOT_FOUND)
+            return
+
+        original_value = task[1] if field == Keys.TASK_TITLE else task[2]
+        updated_value = message.text.strip()
+
+        if original_value == updated_value:
+            await message.reply(Messages.NO_CHANGES_MADE)
+            return
+
+        db.update_task(task_id, field, updated_value)
+
+        tasks = db.get_tasks(uid)
+        task_order = next((i + 1 for i, t in enumerate(tasks) if t[0] == task_id), -1)
+
+        if field == Keys.TASK_TITLE:
+            title_display = Messages.add_pencil(updated_value)
+            description_display = task[2]
+        elif field == Keys.TASK_DESCRIPTION:
+            title_display = task[1]
+            description_display = Messages.add_pencil(updated_value)
+
+        if task_order == -1:
+            await message.reply(Messages.TASK_NOT_FOUND)
+            return
+
+        await message.reply(
+            Messages.task_details(
+                task_number=task_order,
+                task_title=title_display,
+                task_description=description_display,
+                status_icon=get_task_status_icon(task[3]),
+            ),
+            reply_markup=InlineKeyboards.TaskActions(task_id, bool(task[3]), ""),
+        )
+
+        await message.reply(Messages.MAIN_MENU, reply_markup=Keyboards.MainMenu)
+        cache.delete_user_cache(uid)
+
     async def view_task_by_number(self, uid: str, message: Message) -> None:
         """Allows user to view a specific task by its number."""
         try:
@@ -166,6 +225,10 @@ class CallbackHandler:
 
         action_handlers = {
             InlineButtons.TOGGLE_STATUS: lambda: self.toggle_task_status(callback_query, task[0]),
+            InlineButtons.EDIT_TITLE: lambda: self.start_editing(callback_query, task[0], States.EDIT_TASK_TITLE),
+            InlineButtons.EDIT_DESCRIPTION: lambda: self.start_editing(
+                callback_query, task[0], States.EDIT_TASK_DESCRIPTION
+            ),
         }
 
         if action in action_handlers:
@@ -198,3 +261,29 @@ class CallbackHandler:
         except Exception as e:
             logging.error(f"[toggle_task_status] Error: {e}", exc_info=True)
             await callback_query.answer(Messages.UNABLE_TO_UPDATE_STATUS)
+
+    async def start_editing(self, callback_query: CallbackQuery, task_id: int, state: str) -> None:
+        """Handles editing task title or description."""
+        task = db.get_task(task_id)
+        if not task:
+            await callback_query.answer(Messages.TASK_NOT_FOUND, show_alert=True)
+            return
+
+        task_id, title, description, is_completed = task
+        is_completed = bool(is_completed)
+
+        cache.update_user_cache(callback_query.from_user.id, Keys.STATE, state)
+        cache.update_user_cache(callback_query.from_user.id, Keys.EDITED_TASK_ID, task_id)
+
+        await callback_query.message.edit_reply_markup(InlineKeyboards.TaskActions(task_id, is_completed, state))
+
+        if state == States.EDIT_TASK_TITLE:
+            await callback_query.message.reply(Messages.EDIT_TASK_TITLE)
+            await callback_query.message.reply(title)
+            await callback_query.message.reply(Messages.SEND_NEW_TITLE)
+        elif state == States.EDIT_TASK_DESCRIPTION:
+            await callback_query.message.reply(Messages.EDIT_TASK_DESCRIPTION)
+            await callback_query.message.reply(description if description else Messages.NO_DESCRIPTION_YET)
+            await callback_query.message.reply(Messages.SEND_NEW_DESCRIPTION)
+
+        await callback_query.answer()
