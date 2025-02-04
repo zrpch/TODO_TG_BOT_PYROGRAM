@@ -3,7 +3,7 @@ import logging
 from pyrogram.client import Client
 from pyrogram.types import CallbackQuery, Message
 
-from bot.keyboards import Buttons, InlineKeyboards, Keyboards
+from bot.keyboards import Buttons, InlineButtons, InlineKeyboards, Keyboards
 from bot.messages import Messages
 from bot.states import Keys, States
 from bot.utils import get_task_status_icon
@@ -143,6 +143,7 @@ class TaskHandler:
             logging.error(f"[view_task_by_number] Error: {e}", exc_info=True)
             await message.reply(Messages.UNEXPECTED_ERROR)
 
+
 class CallbackHandler:
     """Handles inline button interactions."""
 
@@ -151,4 +152,49 @@ class CallbackHandler:
 
     async def handle_callback(self, client: Client, callback_query: CallbackQuery) -> None:
         """Processes inline button clicks."""
-        pass
+        data = callback_query.data.split(":")  # type: ignore
+        if len(data) < 2:
+            await callback_query.answer(Messages.INVALID_ACTION, show_alert=True)
+            return
+
+        action, task_id = data[0], int(data[1]) if isinstance(data[1], str) and data[1].isdigit() else data[1]
+        task = db.get_task(int(task_id))
+
+        if not task:
+            await callback_query.answer(Messages.TASK_NOT_FOUND, show_alert=True)
+            return
+
+        action_handlers = {
+            InlineButtons.TOGGLE_STATUS: lambda: self.toggle_task_status(callback_query, task[0]),
+        }
+
+        if action in action_handlers:
+            await action_handlers[action]()  # type: ignore
+
+    async def toggle_task_status(self, callback_query: CallbackQuery, task_id: int) -> None:
+        """Toggles the completion status of a task and updates the message."""
+        task = db.get_task(task_id)
+        if not task:
+            await callback_query.answer(Messages.TASK_NOT_FOUND, show_alert=True)
+            return
+
+        task_id, title, description, is_completed = task
+        new_status = not bool(is_completed)
+        db.update_task(task_id, "is_completed", str(int(new_status)))
+
+        new_icon = get_task_status_icon(new_status)
+        old_icon = get_task_status_icon(is_completed)
+        updated_text = callback_query.message.text.replace(old_icon, new_icon)
+
+        try:
+            if updated_text != callback_query.message.text:
+                await callback_query.message.edit_text(
+                    updated_text,
+                    reply_markup=InlineKeyboards.TaskActions(task_id, new_status, ""),
+                )
+                await callback_query.answer(Messages.TASK_STATUS_UPDATED)
+            else:
+                await callback_query.answer(Messages.TASK_ALREADY_IN_STATUS)
+        except Exception as e:
+            logging.error(f"[toggle_task_status] Error: {e}", exc_info=True)
+            await callback_query.answer(Messages.UNABLE_TO_UPDATE_STATUS)

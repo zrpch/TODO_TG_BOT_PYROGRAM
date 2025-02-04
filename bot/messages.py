@@ -14,6 +14,11 @@ class Messages:
 
     ENTER_TASK_TITLE = "Enter task title:"
     ENTER_TASK_DESCRIPTION = "Enter task description:"
+    TASK_NOT_FOUND = "❌ Task not found!"
+
+    TASK_STATUS_UPDATED = "✅ Task status updated!"
+    TASK_ALREADY_IN_STATUS = "️️⚠️ Task is already in this state."
+    UNABLE_TO_UPDATE_STATUS = "⚠️ Unable to update task status!"
 
     TASK_ADDED = "Task added successfully!"
     TASK_DELETED = "✅ Task deleted!"
@@ -24,7 +29,8 @@ class Messages:
     INVALID_INPUT = "❌ Invalid input. Please enter a valid task number."
     UNEXPECTED_ERROR = "⚠️ Unexpected error occurred."
     TASK_NOT_FOUND_ENT_VALID = "❌ Task not found. Enter a valid task number."
-    
+
+    INVALID_ACTION = "❌ Invalid action!"
 
     MISSING_API_CREDENTIALS = "❌ Missing API credentials! Check .env file."
 
