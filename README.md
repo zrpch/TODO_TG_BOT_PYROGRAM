@@ -1,4 +1,4 @@
-# Telegram Task Manager Bot
+# Telegram Task Manager Bot (Beta)
 
 This project is a Telegram bot for managing personal tasks. Users can register, create, view, and manage tasks via a simple chat interface. The bot is built using **Pyrogram** and **Finite State Machine (FSM)** for user interaction and task management.
 
