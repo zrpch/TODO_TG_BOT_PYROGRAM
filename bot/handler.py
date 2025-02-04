@@ -3,9 +3,10 @@ import logging
 from pyrogram.client import Client
 from pyrogram.types import CallbackQuery, Message
 
-from bot.keyboards import Buttons, Keyboards
+from bot.keyboards import Buttons, InlineKeyboards, Keyboards
 from bot.messages import Messages
 from bot.states import Keys, States
+from bot.utils import get_task_status_icon
 from cache.cache import Cache
 from database.database import Database
 
@@ -37,6 +38,7 @@ class TaskHandler:
             States.ENTER_USERNAME: self.register_username,
             States.ENTER_TASK_TITLE: self.add_task_title,
             States.ENTER_TASK_DESCRIPTION: self.add_task_description,
+            States.ENTER_TASK_NUMBER: self.view_task_by_number,
         }
         if state in state_handlers:
             await state_handlers[state](uid, message)
@@ -110,6 +112,36 @@ class TaskHandler:
         db.create_task(uid, title, message.text)
         cache.delete_user_cache(uid)
         await message.reply(Messages.TASK_ADDED, reply_markup=Keyboards.MainMenu)
+
+    async def view_task_by_number(self, uid: str, message: Message) -> None:
+        """Allows user to view a specific task by its number."""
+        try:
+            task_number = int(message.text) - 1
+            tasks = db.get_tasks(uid)
+
+            if 0 <= task_number < len(tasks):
+                task_id, title, description, is_completed = tasks[task_number]
+
+                await message.reply(
+                    Messages.task_details(
+                        task_number=task_number + 1,
+                        task_title=title,
+                        task_description=description,
+                        status_icon=get_task_status_icon(is_completed),
+                    ),
+                    reply_markup=InlineKeyboards.TaskActions(int(task_id), bool(is_completed), ""),
+                )
+
+                await message.reply(Messages.MAIN_MENU, reply_markup=Keyboards.MainMenu)
+                cache.delete_user_cache(uid)
+
+            else:
+                await message.reply(Messages.TASK_NOT_FOUND_ENT_VALID)
+        except ValueError:
+            await message.reply(Messages.INVALID_INPUT)
+        except Exception as e:
+            logging.error(f"[view_task_by_number] Error: {e}", exc_info=True)
+            await message.reply(Messages.UNEXPECTED_ERROR)
 
 class CallbackHandler:
     """Handles inline button interactions."""
