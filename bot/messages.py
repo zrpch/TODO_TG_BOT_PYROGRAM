@@ -7,6 +7,12 @@ class Messages:
     ENTER_YOUR_USERNAME = "Enter your username:"
     USERNAME_EXISTS = "❌ This username is already taken.\nPlease enter a different username:"
 
+    ENTER_TASK_TITLE = "Enter task title:"
+    ENTER_TASK_DESCRIPTION = "Enter task description:"
+
+    TASK_ADDED = "Task added successfully!"
+    TASK_DELETED = "✅ Task deleted!"
+
     UNKNOWN_COMMAND = "Unknown command"
 
     MISSING_API_CREDENTIALS = "❌ Missing API credentials! Check .env file."

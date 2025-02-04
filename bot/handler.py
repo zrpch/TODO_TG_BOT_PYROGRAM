@@ -35,6 +35,8 @@ class TaskHandler:
         state_handlers = {
             States.ENTER_NAME: self.register_name,
             States.ENTER_USERNAME: self.register_username,
+            States.ENTER_TASK_TITLE: self.add_task_title,
+            States.ENTER_TASK_DESCRIPTION: self.add_task_description,
         }
         if state in state_handlers:
             await state_handlers[state](uid, message)
@@ -95,6 +97,19 @@ class TaskHandler:
         db.create_user(name, username, uid)
         cache.delete_user_cache(uid)
         await message.reply(Messages.welcome(name), reply_markup=Keyboards.MainMenu)
+
+    async def add_task_title(self, uid: str, message: Message) -> None:
+        """Adds a task title to the cache."""
+        cache.update_user_cache(uid, Keys.TASK_TITLE, message.text)
+        cache.update_user_cache(uid, Keys.STATE, States.ENTER_TASK_DESCRIPTION)
+        await message.reply(Messages.ENTER_TASK_DESCRIPTION, reply_markup=Keyboards.Hide)
+
+    async def add_task_description(self, uid: str, message: Message) -> None:
+        """Saves the task to the database."""
+        title = cache.get_user_cache(uid, Keys.TASK_TITLE)
+        db.create_task(uid, title, message.text)
+        cache.delete_user_cache(uid)
+        await message.reply(Messages.TASK_ADDED, reply_markup=Keyboards.MainMenu)
 
 class CallbackHandler:
     """Handles inline button interactions."""

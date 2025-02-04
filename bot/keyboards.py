@@ -46,6 +46,8 @@ class Keyboards:
         resize_keyboard=True,
     )
 
+    Hide = ReplyKeyboardRemove()
+
 
 class InlineKeyboards:
     """Defines inline keyboards for task actions."""
