@@ -12,7 +12,11 @@ from bot.states import States
 class Buttons:
     """Defines text labels for main menu buttons."""
 
-    pass
+    ADD = "➕ Add new task"
+    ALL = "📇 All tasks"
+    VIEW_TASK = "🎯 Task by №"
+    REGISTRATION = "😎 Registration"
+    HELP = "Help"
 
 
 class InlineButtons:
@@ -30,7 +34,17 @@ class Labels:
 class Keyboards:
     """Defines main menu keyboards with reply buttons."""
 
-    pass
+    RegistrationMenu = ReplyKeyboardMarkup(
+        [[KeyboardButton(Buttons.REGISTRATION), KeyboardButton(Buttons.HELP)]], resize_keyboard=True
+    )
+
+    MainMenu = ReplyKeyboardMarkup(
+        [
+            [KeyboardButton(Buttons.ADD), KeyboardButton(Buttons.ALL), KeyboardButton(Buttons.VIEW_TASK)],
+            [KeyboardButton(Buttons.HELP)],
+        ],
+        resize_keyboard=True,
+    )
 
 
 class InlineKeyboards:
