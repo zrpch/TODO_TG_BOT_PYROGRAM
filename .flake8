@@ -1,0 +1,17 @@
+[flake8]
+max-line-length = 120
+max-complexity = 5
+exclude = 
+    .git,
+    __pycache__,
+    .pytest_cache,
+    .mypy_cache,
+    .vscode,
+    .venv,
+    build,
+    dist,
+    migrations,
+    docker
+extend-ignore = 
+    E203,
+    W503

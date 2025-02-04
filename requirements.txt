@@ -1,0 +1,7 @@
+pyrogram
+tgcrypto
+python-dotenv
+SQLAlchemy
+alembic
+psycopg2
+redis

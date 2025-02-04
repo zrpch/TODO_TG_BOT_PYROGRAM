@@ -1,0 +1,10 @@
+.venv
+.vscode
+.git
+venv
+etc/
+.idea
+__pycache__/
+.pytest_cache
+.mypy_cache
+.DS_store
