@@ -51,6 +51,7 @@ class TaskHandler:
             "/start": self.handle_start,
             Buttons.REGISTRATION: self.initiate_registration,
             Buttons.ALL: self.list_all_tasks,
+            Buttons.ADD: self.initiate_task_creation,
             Buttons.VIEW_TASK: self.request_task_number,
             "/help": self.handle_help,
             Buttons.HELP: self.handle_help,
@@ -64,28 +65,6 @@ class TaskHandler:
                 await handler(uid, message)  # type: ignore
         else:
             await self.handle_unknown_command(message)
-
-    async def list_all_tasks(self, uid: str, message: Message) -> None:
-        """Lists all tasks for the user."""
-        tasks = db.get_tasks(uid)
-
-        if not tasks:
-            await message.reply(Messages.NO_TASKS_YET, reply_markup=Keyboards.MainMenu)
-        else:
-            task_list = "\n".join(
-                [f"{get_task_status_icon(bool(task[3]))} {i + 1}. {task[1]}" for i, task in enumerate(tasks)]
-            )
-            await message.reply(Messages.task_list(task_list), reply_markup=Keyboards.MainMenu)
-
-    async def request_task_number(self, uid: str, message: Message) -> None:
-        """Asks the user to enter a task number."""
-        tasks = db.get_tasks(uid)
-
-        if not tasks:
-            await message.reply(Messages.NO_TASKS_YET, reply_markup=Keyboards.MainMenu)
-        else:
-            await message.reply(Messages.task_number_request(len(tasks)))
-            cache.update_user_cache(uid, Keys.STATE, States.ENTER_TASK_NUMBER)
 
     async def handle_start(self, uid: str, user: object, message: Message) -> None:
         """Handles the /start command."""
@@ -102,10 +81,37 @@ class TaskHandler:
         """Handles unknown commands."""
         await message.reply(Messages.UNKNOWN_COMMAND, reply_markup=Keyboards.MainMenu)
 
+    async def list_all_tasks(self, uid: str, message: Message) -> None:
+        """Lists all tasks for the user."""
+        tasks = db.get_tasks(uid)
+
+        if not tasks:
+            await message.reply(Messages.NO_TASKS_YET, reply_markup=Keyboards.MainMenu)
+        else:
+            task_list = "\n".join(
+                [f"{get_task_status_icon(bool(task[3]))} {i + 1}. {task[1]}" for i, task in enumerate(tasks)]
+            )
+            await message.reply(Messages.task_list(task_list), reply_markup=Keyboards.MainMenu)
+
     async def initiate_registration(self, uid: str, message: Message) -> None:
         """Starts the registration process."""
         await message.reply(Messages.ENTER_YOUR_NAME)
         cache.update_user_cache(uid, Keys.STATE, States.ENTER_NAME)
+
+    async def initiate_task_creation(self, uid: str, message: Message) -> None:
+        """Starts the task creation process."""
+        await message.reply(Messages.ENTER_TASK_TITLE, reply_markup=Keyboards.Hide)
+        cache.update_user_cache(uid, Keys.STATE, States.ENTER_TASK_TITLE)
+
+    async def request_task_number(self, uid: str, message: Message) -> None:
+        """Asks the user to enter a task number."""
+        tasks = db.get_tasks(uid)
+
+        if not tasks:
+            await message.reply(Messages.NO_TASKS_YET, reply_markup=Keyboards.MainMenu)
+        else:
+            await message.reply(Messages.task_number_request(len(tasks)))
+            cache.update_user_cache(uid, Keys.STATE, States.ENTER_TASK_NUMBER)
 
     async def register_name(self, uid: str, message: Message) -> None:
         """Processes the user's name during registration."""
@@ -253,6 +259,8 @@ class CallbackHandler:
             InlineButtons.EDIT_DESCRIPTION: lambda: self.start_editing(
                 callback_query, task[0], States.EDIT_TASK_DESCRIPTION
             ),
+            InlineButtons.CANCEL_EDIT: lambda: self.cancel_edit(callback_query, task[0]),
+            InlineButtons.DELETE_TASK: lambda: self.delete_task(callback_query, task[0]),
         }
 
         if action in action_handlers:
@@ -311,3 +319,29 @@ class CallbackHandler:
             await callback_query.message.reply(Messages.SEND_NEW_DESCRIPTION)
 
         await callback_query.answer()
+
+    async def cancel_edit(self, callback_query: CallbackQuery, task_id: int) -> None:
+        """Cancels the editing mode."""
+        task = db.get_task(task_id)
+        if not task:
+            await callback_query.answer(Messages.TASK_NOT_FOUND, show_alert=True)
+            return
+
+        task_id, _, _, is_completed = task
+        is_completed = bool(is_completed)
+
+        cache.delete_user_cache(callback_query.from_user.id)
+        await callback_query.message.edit_reply_markup(InlineKeyboards.TaskActions(task_id, is_completed, ""))
+        await callback_query.message.reply(Messages.EDITING_CANCELLED)
+        await callback_query.answer()
+
+    async def delete_task(self, callback_query: CallbackQuery, task_id: int) -> None:
+        """Deletes a task from the database."""
+        task = db.get_task(task_id)
+        if not task:
+            await callback_query.answer(Messages.TASK_NOT_FOUND, show_alert=True)
+            return
+
+        db.delete_task(task_id)
+        await callback_query.message.edit_text(Messages.TASK_DELETED_SUCCESSFULLY)
+        await callback_query.answer(Messages.TASK_DELETED)
